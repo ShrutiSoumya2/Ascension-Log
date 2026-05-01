@@ -1,0 +1,132 @@
+:root {
+  --bg-dark: #121215;
+  --panel-bg: rgba(30, 30, 38, 0.9);
+  --line-light: #d3d3d3;
+  --accent-red: #8b0000;
+  --accent-orange: #ff4500;
+  --text-main: #f8f8f2;
+}
+
+body {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  background-image: url('/assets/backgroundmain.jpg'); 
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+}
+
+.glass-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--line-light);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.btn-gothic {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid var(--line-light);
+  color: var(--accent-orange);
+  padding: 8px 16px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+  transition: 0.3s ease;
+}
+
+.btn-gothic:hover {
+  background: var(--accent-red);
+  color: #fff;
+  border-color: var(--accent-red);
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: 250px 1fr 250px; 
+  gap: 20px;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* --- Fixed Character Assembly & Stage --- */
+.character-stage {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  border: 2px solid var(--accent-red);
+  border-radius: 8px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center bottom;
+  transition: background-image 0.8s ease;
+}
+
+/* The Master Rig - Now just holds ONE flat Figma image */
+.character-rig {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  left: 50%;
+  margin-left: -175px; 
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth lunge physics */
+  z-index: 10;
+}
+
+.character-rig img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Stance: Cave (Sitting on cushion) */
+.stance-cave { bottom: 10px; }
+
+/* Stance: Sky (Flying) */
+.stance-sky { bottom: 40px; }
+
+/* Stance: Forest (Idle Attack Ready) */
+.stance-forest { bottom: 0px; margin-left: -80px; } 
+
+/* --- The Lunge Attack Animation --- */
+/* Simply slides the entire flat image forward towards the beast */
+.character-rig.is-striking {
+  transform: translateX(80px); /* Lunges to the right */
+}
+
+/* Boss Defeat Glow */
+@keyframes levelUpGlow {
+  0% { box-shadow: inset 0 0 0px rgba(255, 215, 0, 0); }
+  50% { box-shadow: inset 0 0 120px rgba(255, 215, 0, 0.9); border-color: gold; }
+  100% { box-shadow: inset 0 0 0px rgba(255, 215, 0, 0); }
+}
+.glow-yellow {
+  animation: levelUpGlow 2.5s ease-out;
+}
+
+/* Momentary Badge Animation */
+@keyframes slideIn {
+  0% { transform: translateX(150%); opacity: 0; }
+  10% { transform: translateX(0); opacity: 1; }
+  90% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(150%); opacity: 0; }
+}
+
+.badge-notification {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--accent-orange);
+  padding: 10px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideIn 4s forwards;
+  z-index: 100;
+}
