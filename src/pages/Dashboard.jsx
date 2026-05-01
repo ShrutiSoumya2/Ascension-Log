@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { GameContext } from '../context/GameContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 import TaskCard from '../components/TaskCard';
@@ -6,25 +6,39 @@ import TaskCard from '../components/TaskCard';
 const Dashboard = () => {
   const { 
     character, level, setLevel, xp, tasks, addTask, completeTask, abandonTask, 
-    mood, setMood, isBossPending, setIsBossPending, 
-    activeBattle, setActiveBattle, streak, firstTaskDone, enemiesDefeated, notification
+    mood, setMood, pendingTribulation, setPendingTribulation, 
+    activeBattle, setActiveBattle, streak, enemiesDefeated, notification
   } = useContext(GameContext);
   
   const [newTaskName, setNewTaskName] = useState('');
   const [difficulty, setDifficulty] = useState('easy');
-  const [isStriking, setIsStriking] = useState(false); // Controls the lunge
-  const [isDefeated, setIsDefeated] = useState(false); // Controls absorption
-  const [showGlow, setShowGlow] = useState(false); 
+  const [isStriking, setIsStriking] = useState(false); 
+  const [isDefeated, setIsDefeated] = useState(false); 
+  const [showYellowGlow, setShowYellowGlow] = useState(false); 
+
+  // Focus Timer States
+  const [customMinutes, setCustomMinutes] = useState(25);
+  const [timeLeft, setTimeLeft] = useState(1500); 
+  const [timerActive, setTimerActive] = useState(false);
+
+  // Mood Advice State
+  const [moodAdvice, setMoodAdvice] = useState("Your Qi is settled. Begin your cultivation.");
+
+  // Ascension States
+  const [reflection, setReflection] = useState('');
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [showAscensionFlash, setShowAscensionFlash] = useState(false);
+  const [showRealmPopup, setShowRealmPopup] = useState(false);
 
   if (!character) return <Navigate to="/" />;
 
-  const beastImages = {
-    easy: { active: 'beast-easy.png', defeated: 'beasteasy-defeated.png' },
-    medium: { active: 'beast-medium.png', defeated: 'beastmedium-defeated.png' },
-    hard: { active: 'beast-hard.png', defeated: 'beasthard-defeated.png' } 
+  // Scales up the medium and hard beasts, and keeps them grounded
+  const beastConfig = {
+    easy: { active: 'beast-easy.png', defeated: 'beasteasy-defeated.png', width: '220px', bottom: '15%', right: '5%' },
+    medium: { active: 'beast-medium.png', defeated: 'beastmedium-defeated.png', width: '380px', bottom: '5%', right: '3%' },
+    hard: { active: 'beast-hard.png', defeated: 'beasthard-defeated.png', width: '480px', bottom: '0%', right: '2%' } 
   };
 
-  // Determines the background and suffix for the flat image
   let currentBg = '/assets/bg-sitting.jpg';
   let currentStance = 'stance-cave';
   let imageSuffix = 'cave';
@@ -39,6 +53,22 @@ const Dashboard = () => {
     imageSuffix = 'sky';
   } 
 
+  useEffect(() => {
+    let interval;
+    if (timerActive && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    } else if (timeLeft === 0) {
+      setTimerActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [timerActive, timeLeft]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   const handleAdd = (e) => {
     e.preventDefault();
     if (newTaskName) {
@@ -47,33 +77,117 @@ const Dashboard = () => {
     }
   };
 
+  const startBattle = (task) => {
+    // If we are ALREADY in a battle and switching to a DIFFERENT one
+    if (activeBattle && activeBattle.id !== task.id) {
+      
+      // 1. Clear the active battle. This immediately triggers the Sky background 
+      // and makes your cultivator float up.
+      setActiveBattle(null); 
+      
+      // 2. Wait exactly 800ms (matching your CSS transition), then dive back down
+      setTimeout(() => {
+        setActiveBattle(task);
+        if (task.difficulty === 'hard') {
+          setTimeLeft(customMinutes * 60); 
+          setTimerActive(false);
+        }
+      }, 800); 
+      
+    } else {
+      // Normal engagement from the sky/cave (no delay needed)
+      setActiveBattle(task);
+      if (task.difficulty === 'hard') {
+        setTimeLeft(customMinutes * 60); 
+        setTimerActive(false);
+      }
+    }
+  };
+
   const handleStrike = () => {
-    // 1. Trigger the forward lunge animation
     setIsStriking(true);
 
-    // 2. Wait for the strike to land (400ms), then slide back
     setTimeout(() => {
       setIsStriking(false); 
       setIsDefeated(true);  
+      setShowYellowGlow(true); 
       
-      // 3. Begin the 4-second Qi Absorption phase
       setTimeout(() => {
-        if (activeBattle.difficulty === 'hard' && isBossPending) {
-          setLevel("Foundation Establishment"); 
-          setIsBossPending(false);
-          setShowGlow(true); 
-          setTimeout(() => setShowGlow(false), 2500);
-        }
         completeTask(activeBattle.id, activeBattle.difficulty);
         setIsDefeated(false);
+        setShowYellowGlow(false);
+        setTimeLeft(customMinutes * 60); 
       }, 4000); 
 
     }, 400); 
   };
 
+  const handleMoodSelect = (moodImg) => {
+    setMood(moodImg);
+    if (moodImg.includes('happy')) setMoodAdvice("Your Qi flows smoothly. Ride this momentum to conquer great heights!");
+    else if (moodImg.includes('neutral')) setMoodAdvice("A calm mind is a cultivator's greatest weapon. Stay grounded.");
+    else if (moodImg.includes('sad')) setMoodAdvice("Even bright stars are born in dark voids. Rest if you must, but do not yield.");
+    else if (moodImg.includes('angry')) setMoodAdvice("Channel this fiery energy into your strikes! Let frustration fuel your breakthrough.");
+  };
+
+  const handleReflectionSubmit = async () => {
+    if (reflection.split(' ').length < 10) {
+      return alert("Your Dao is shallow. Provide at least 10 words of true reflection.");
+    }
+    setIsEvaluating(true);
+    setTimeout(() => {
+      setIsEvaluating(false);
+      setPendingTribulation(null); 
+      setShowAscensionFlash(true); 
+      setTimeout(() => {
+        setLevel(pendingTribulation); 
+        setShowRealmPopup(true); 
+        setTimeout(() => {
+          setShowAscensionFlash(false);
+          setShowRealmPopup(false);
+          setReflection('');
+        }, 4000);
+      }, 1500); 
+    }, 2000);
+  };
+
   return (
     <div className="layout-grid" style={{ position: 'relative' }}>
       
+      {showAscensionFlash && <div className="ascension-screen-flash"></div>}
+      
+      {showRealmPopup && (
+        <div className="realm-popup">
+          <h3 style={{ color: '#fff', margin: '0 0 10px 0', letterSpacing: '2px' }}>Breakthrough Successful!</h3>
+          <h1>{level}</h1>
+        </div>
+      )}
+
+      {pendingTribulation && !showAscensionFlash && !showRealmPopup && (
+        <div className="tribulation-overlay">
+          <div className="tribulation-box">
+            <h2 style={{ color: 'gold', fontSize: '2.5rem', margin: 0 }}>Heavenly Tribulation</h2>
+            <p style={{ color: '#ccc', fontSize: '1.2rem' }}>You stand at the threshold of <strong>{pendingTribulation}</strong>. To break through, prove your mind is tempered.</p>
+            <p style={{ color: 'var(--accent-orange)' }}>Reflect on your recent tasks: What was your greatest bottleneck, and how did you overcome it?</p>
+            <textarea 
+              className="dao-textarea" 
+              placeholder="The path to immortality requires insight. Type your reflection here..."
+              value={reflection}
+              onChange={(e) => setReflection(e.target.value)}
+              disabled={isEvaluating}
+            />
+            <button 
+              className="btn-gothic" 
+              style={{ background: 'gold', color: 'black', fontSize: '1.2rem', padding: '15px 30px', marginTop: '20px', width: '100%' }}
+              onClick={handleReflectionSubmit}
+              disabled={isEvaluating}
+            >
+              {isEvaluating ? "The Heavens are Judging..." : "Submit to the Heavens"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {notification && (
         <div className="badge-notification">
           <img src={`/assets/${notification.img}.png`} style={{ width: '35px', height: '35px', objectFit: 'contain' }} alt="badge" />
@@ -81,7 +195,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* --- LEFT: Task Manager --- */}
+      {/* --- LEFT: Task Manager (Now wider!) --- */}
       <div className="glass-panel">
         <h2 style={{ borderBottom: '1px solid var(--line-light)' }}>Demon Bounties</h2>
         <form onSubmit={handleAdd} style={{ marginBottom: '20px' }}>
@@ -89,9 +203,11 @@ const Dashboard = () => {
             value={newTaskName} onChange={e => setNewTaskName(e.target.value)} 
             placeholder="New Quest..." style={{ width: '100%', marginBottom: '10px', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '8px', border: '1px solid var(--line-light)' }}
           />
+          {/* UPDATED BEAST NAMES */}
           <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="btn-gothic" style={{ width: '100%', marginBottom: '10px' }}>
-            <option value="easy">Lesser Beast</option>
-            <option value="medium">Shadow Wolf</option>
+            <option value="easy">Gale Wolf</option>
+            <option value="medium">Netherflame Beast</option>
+            <option value="hard">Abyssal Demon King</option>
           </select>
           <button type="submit" className="btn-gothic" style={{ width: '100%', background: 'var(--accent-red)', color: 'white' }}>Add Bounty</button>
         </form>
@@ -101,7 +217,7 @@ const Dashboard = () => {
             <TaskCard 
               key={task.id} 
               task={task} 
-              onBattle={(t) => setActiveBattle(t)} 
+              onBattle={() => startBattle(task)} 
               onFlee={abandonTask} 
             />
           ))}
@@ -111,7 +227,6 @@ const Dashboard = () => {
       {/* --- CENTER: Dynamic Arena Stage --- */}
       <div className="glass-panel" style={{ textAlign: 'center', position: 'relative' }}>
         
-        {/* Battle Mode Indicator - Locked to flaming sword (sword.png) */}
         {activeBattle && (
           <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(139,0,0,0.3)', padding: '5px 10px', borderRadius: '5px', border: '1px solid var(--accent-red)' }}>
             <span style={{ color: 'var(--accent-orange)', fontSize: '0.8rem', fontWeight: 'bold' }}>BATTLE MODE</span>
@@ -122,45 +237,79 @@ const Dashboard = () => {
         <h2 style={{ margin: '0 0 5px 0' }}>{character.name}</h2>
         <p style={{ color: 'var(--accent-orange)', margin: '0 0 20px 0' }}>Realm: {level} | XP: {xp}</p>
         
-        {isBossPending && !activeBattle ? (
-          <div style={{ padding: '40px', border: '2px dashed var(--accent-red)', margin: '50px 0', background: 'rgba(139,0,0,0.2)' }}>
-            <h2 style={{ color: 'var(--accent-orange)' }}>Breakthrough Tribulation Imminent!</h2>
-            <button onClick={() => setActiveBattle({ id: 'boss', difficulty: 'hard' })} className="btn-gothic" style={{ background: 'var(--accent-red)', color: 'white', fontSize: '1.2rem', padding: '15px' }}>
-              Engage Demon Boss
-            </button>
+        <div className={`character-stage ${showYellowGlow ? 'glow-yellow' : ''}`} style={{ backgroundImage: `url('${currentBg}')` }}>
+          
+          <div className={`character-rig ${currentStance} ${isStriking ? 'is-striking' : ''}`}>
+            <img src={`/assets/${character.classId}-${imageSuffix}.png`} alt="cultivator" />
           </div>
-        ) : (
-          <div className={`character-stage ${showGlow ? 'glow-yellow' : ''}`} style={{ backgroundImage: `url('${currentBg}')` }}>
-            
-            {/* The single rig that lunges when isStriking is true */}
-            <div className={`character-rig ${currentStance} ${isStriking ? 'is-striking' : ''}`}>
-              {/* MAGIC TRICK: Loads 'character-female-cave.png', etc. dynamically! */}
-              <img src={`/assets/${character.classId}-${imageSuffix}.png`} alt="cultivator" />
-            </div>
 
-            {activeBattle && (
-              <img 
-                src={`/assets/${isDefeated ? beastImages[activeBattle.difficulty].defeated : beastImages[activeBattle.difficulty].active}`} 
-                alt="Beast" 
-                style={{ position: 'absolute', right: '5%', bottom: '15%', width: '220px', objectFit: 'contain', transition: '0.5s', zIndex: 10 }} 
-              />
-            )}
-          </div>
-        )}
-
-        <div style={{ marginTop: '20px', minHeight: '60px' }}>
+          {/* THE MAGIC FIX: The 'key' prop and 'beast-spawn' class */}
           {activeBattle && (
+            <img 
+              key={activeBattle.id} 
+              className="beast-spawn"
+              src={`/assets/${isDefeated ? beastConfig[activeBattle.difficulty].defeated : beastConfig[activeBattle.difficulty].active}`} 
+              alt="Beast" 
+              style={{ 
+                position: 'absolute', 
+                right: beastConfig[activeBattle.difficulty].right, 
+                bottom: beastConfig[activeBattle.difficulty].bottom, 
+                width: beastConfig[activeBattle.difficulty].width, 
+                objectFit: 'contain', 
+                zIndex: 10 
+              }} 
+            />
+          )}
+        </div>
+
+        <div style={{ marginTop: '20px', minHeight: '80px' }}>
+          {activeBattle && activeBattle.difficulty === 'hard' && !isDefeated ? (
+            <div>
+               {timeLeft > 0 ? (
+                 <>
+                   {/* DYNAMIC TIMER INPUT - Shows only when paused and full */}
+                   {!timerActive && timeLeft === customMinutes * 60 ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                         <input 
+                           type="number" 
+                           className="timer-input" 
+                           value={customMinutes} 
+                           onChange={(e) => {
+                             const val = Math.max(1, e.target.value);
+                             setCustomMinutes(val);
+                             setTimeLeft(val * 60);
+                           }} 
+                         />
+                         <span style={{ fontSize: '1.5rem', color: 'var(--accent-orange)', fontWeight: 'bold' }}>MINUTES</span>
+                      </div>
+                   ) : (
+                      <div className="pomodoro-display">{formatTime(timeLeft)}</div>
+                   )}
+
+                   {/* UPDATED BUTTON TEXT */}
+                   {!timerActive ? (
+                     <button onClick={() => setTimerActive(true)} className="btn-gothic" style={{ background: 'var(--accent-red)' }}>PREPARE FOR BATTLE</button>
+                   ) : (
+                     <button onClick={() => setTimerActive(false)} className="btn-gothic">BREATHE</button>
+                   )}
+                 </>
+               ) : (
+                 <button onClick={handleStrike} className="btn-gothic" style={{ fontSize: '1.5rem', borderColor: 'var(--accent-red)', padding: '15px 30px' }} disabled={isStriking}>
+                    DELIVER FINAL STRIKE!
+                 </button>
+               )}
+            </div>
+          ) : activeBattle ? (
             <button onClick={handleStrike} className="btn-gothic" style={{ fontSize: '1.5rem', borderColor: 'var(--accent-red)', padding: '15px 30px' }} disabled={isDefeated || isStriking}>
               {isDefeated ? "ABSORBING QI..." : "ATTACK WITH WEAPON!"}
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* --- RIGHT: Sect Stats & Mood --- */}
       <div className="glass-panel">
         <h2 style={{ borderBottom: '1px solid var(--line-light)' }}>Sect Stats</h2>
-        
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px' }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px' }}>
               <img src="/assets/flame.png" style={{ width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 }} alt="flame" />
@@ -169,7 +318,6 @@ const Dashboard = () => {
                   <span style={{ fontSize: '0.9rem', color: '#fff' }}>Current Streak</span>
               </div>
            </div>
-           
            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', opacity: enemiesDefeated > 0 ? 1 : 0.4 }}>
               <img src="/assets/crown.png" style={{ width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 }} alt="crown" />
               <div style={{ textAlign: 'left' }}>
@@ -184,14 +332,20 @@ const Dashboard = () => {
             <img src={`/assets/${mood}`} style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,69,0,0.5))' }} alt="current mood" />
         </div>
         
+        {/* MODIFIED TO CALL handleMoodSelect */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-           <button onClick={() => setMood('mood-happy.png')} className="btn-gothic">Happy</button>
-           <button onClick={() => setMood('mood-neutral.png')} className="btn-gothic">Neutral</button>
-           <button onClick={() => setMood('mood-sad.png')} className="btn-gothic">Sad</button>
-           <button onClick={() => setMood('mood-angry.png')} className="btn-gothic">Angry</button>
+           <button onClick={() => handleMoodSelect('mood-happy.png')} className="btn-gothic">Happy</button>
+           <button onClick={() => handleMoodSelect('mood-neutral.png')} className="btn-gothic">Neutral</button>
+           <button onClick={() => handleMoodSelect('mood-sad.png')} className="btn-gothic">Sad</button>
+           <button onClick={() => handleMoodSelect('mood-angry.png')} className="btn-gothic">Angry</button>
         </div>
-      </div>
 
+        {/* NEW MOOD ADVICE TEXT */}
+        <div className="mood-advice">
+           {moodAdvice}
+        </div>
+
+      </div>
     </div>
   );
 };

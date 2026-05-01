@@ -8,13 +8,14 @@ export const GameProvider = ({ children }) => {
   const [xp, setXp] = useState(parseInt(localStorage.getItem('xp')) || 0);
   const [tasks, setTasks] = useState(() => JSON.parse(localStorage.getItem('tasks')) || []);
   const [mood, setMood] = useState('mood-neutral.png');
-  const [isBossPending, setIsBossPending] = useState(false);
+  
+  // Controls when the full-screen tribulation happens
+  const [pendingTribulation, setPendingTribulation] = useState(null); 
   
   const [activeBattle, setActiveBattle] = useState(null); 
   const [streak, setStreak] = useState(parseInt(localStorage.getItem('streak')) || 1);
   const [firstTaskDone, setFirstTaskDone] = useState(localStorage.getItem('firstTask') === 'true');
   const [enemiesDefeated, setEnemiesDefeated] = useState(parseInt(localStorage.getItem('enemiesDefeated')) || 0);
-  
   const [notification, setNotification] = useState(null); 
 
   useEffect(() => {
@@ -28,14 +29,17 @@ export const GameProvider = ({ children }) => {
       localStorage.setItem('enemiesDefeated', enemiesDefeated);
     }
     
-    if (xp >= 100 && level === "Qi Condensation") setIsBossPending(true);
-    if (xp >= 300 && level === "Foundation Establishment") setIsBossPending(true);
+    // REBALANCED XP THRESHOLDS
+    if (xp >= 500 && level === "Qi Condensation") setPendingTribulation("Foundation Establishment");
+    if (xp >= 1500 && level === "Foundation Establishment") setPendingTribulation("Core Formation");
+    if (xp >= 3500 && level === "Core Formation") setPendingTribulation("Nascent Soul");
   }, [character, level, xp, tasks, streak, firstTaskDone, enemiesDefeated]);
 
   const addTask = (task) => setTasks([...tasks, task]);
   
   const completeTask = (taskId, difficulty) => {
-    const gainedXp = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 25 : 50;
+    // Hard (Boss) gives a massive 100 XP due to the 25 min timer
+    const gainedXp = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 30 : 100;
     setXp(prev => prev + gainedXp);
     setTasks(prev => prev.filter(t => t.id !== taskId));
     setEnemiesDefeated(prev => prev + 1);
@@ -68,13 +72,14 @@ export const GameProvider = ({ children }) => {
     setFirstTaskDone(false);
     setEnemiesDefeated(0);
     setActiveBattle(null);
+    setPendingTribulation(null);
   };
 
   return (
     <GameContext.Provider value={{
       character, setCharacter, level, setLevel, xp, setXp,
       tasks, addTask, completeTask, abandonTask, mood, setMood,
-      isBossPending, setIsBossPending,
+      pendingTribulation, setPendingTribulation,
       activeBattle, setActiveBattle, streak, firstTaskDone, enemiesDefeated,
       notification, triggerNotification, resetProgressForNewUser
     }}>
