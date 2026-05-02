@@ -7,7 +7,8 @@ const Dashboard = () => {
   const { 
     character, level, setLevel, xp, tasks, addTask, completeTask, abandonTask, 
     mood, setMood, pendingTribulation, setPendingTribulation, 
-    activeBattle, setActiveBattle, streak, enemiesDefeated, notification
+    activeBattle, setActiveBattle, streak, enemiesDefeated, notification,
+    hasSeenBossWarning, setHasSeenBossWarning // Brought in from Context!
   } = useContext(GameContext);
   
   const [newTaskName, setNewTaskName] = useState('');
@@ -23,6 +24,18 @@ const Dashboard = () => {
 
   // Mood Advice State
   const [moodAdvice, setMoodAdvice] = useState("Your Qi is settled. Begin your cultivation.");
+
+  // --- New Streak Pulse State ---
+  const [streakPulse, setStreakPulse] = useState(false);
+
+  useEffect(() => {
+    // Whenever the streak mounts or increases, trigger the halo pulse!
+    if (streak > 0) {
+      setStreakPulse(true);
+      const timer = setTimeout(() => setStreakPulse(false), 2000); 
+      return () => clearTimeout(timer);
+    }
+  }, [streak]);
 
   // Ascension States
   const [reflection, setReflection] = useState('');
@@ -73,6 +86,12 @@ const Dashboard = () => {
     e.preventDefault();
     if (newTaskName) {
       addTask({ id: Date.now(), name: newTaskName, difficulty });
+      
+      // If they accepted a Boss Battle, mark the warning as seen!
+      if (difficulty === 'hard') {
+        setHasSeenBossWarning(true);
+      }
+      
       setNewTaskName('');
     }
   };
@@ -195,7 +214,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* --- LEFT: Task Manager (Now wider!) --- */}
+      {/* --- LEFT: Task Manager --- */}
       <div className="glass-panel">
         <h2 style={{ borderBottom: '1px solid var(--line-light)' }}>Demon Bounties</h2>
         <form onSubmit={handleAdd} style={{ marginBottom: '20px' }}>
@@ -203,12 +222,19 @@ const Dashboard = () => {
             value={newTaskName} onChange={e => setNewTaskName(e.target.value)} 
             placeholder="New Quest..." style={{ width: '100%', marginBottom: '10px', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '8px', border: '1px solid var(--line-light)' }}
           />
-          {/* UPDATED BEAST NAMES */}
           <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="btn-gothic" style={{ width: '100%', marginBottom: '10px' }}>
-            <option value="easy">Gale Wolf</option>
-            <option value="medium">Netherflame Beast</option>
-            <option value="hard">Abyssal Demon King</option>
+            <option value="easy">Gale Wolf [Minor Demon]</option>
+            <option value="medium">Netherflame Beast [Elite Fiend]</option>
+            <option value="hard">Abyssal Demon King [Boss Battle]</option>
           </select>
+
+          {/* DYNAMIC WARNING: Appears only if they select Hard AND haven't acknowledged it yet */}
+          {difficulty === 'hard' && !hasSeenBossWarning && (
+            <div style={{ fontSize: '0.85rem', color: 'var(--accent-orange)', marginBottom: '15px', fontStyle: 'italic', borderLeft: '2px solid var(--accent-orange)', paddingLeft: '8px' }}>
+              * Defeating a Demon King requires real-world focus. You must complete a minimum 20-minute Pomodoro task to gather enough Qi to strike!
+            </div>
+          )}
+
           <button type="submit" className="btn-gothic" style={{ width: '100%', background: 'var(--accent-red)', color: 'white' }}>Add Bounty</button>
         </form>
 
@@ -243,7 +269,6 @@ const Dashboard = () => {
             <img src={`/assets/${character.classId}-${imageSuffix}.png`} alt="cultivator" />
           </div>
 
-          {/* THE MAGIC FIX: The 'key' prop and 'beast-spawn' class */}
           {activeBattle && (
             <img 
               key={activeBattle.id} 
@@ -269,26 +294,50 @@ const Dashboard = () => {
                  <>
                    {/* DYNAMIC TIMER INPUT - Shows only when paused and full */}
                    {!timerActive && timeLeft === customMinutes * 60 ? (
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                         <input 
-                           type="number" 
-                           className="timer-input" 
-                           value={customMinutes} 
-                           onChange={(e) => {
-                             const val = Math.max(1, e.target.value);
-                             setCustomMinutes(val);
-                             setTimeLeft(val * 60);
-                           }} 
-                         />
-                         <span style={{ fontSize: '1.5rem', color: 'var(--accent-orange)', fontWeight: 'bold' }}>MINUTES</span>
-                      </div>
+                      <>
+                         {/* LORE INSTRUCTIONS: Reminds player of the real-world mechanic! */}
+                         <p style={{ color: 'var(--line-light)', fontSize: '0.9rem', fontStyle: 'italic', marginBottom: '15px', padding: '0 20px' }}>
+                           Set your meditation timer. Focus purely on your real-world task to gather Qi. Do not break your concentration until the timer ends!
+                         </p>
+
+                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                           <input 
+                             type="number" 
+                             className="timer-input"
+                             min="20" 
+                             value={customMinutes} 
+                             onChange={(e) => {
+                               // Allows smooth typing without snapping the number prematurely
+                               const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                               setCustomMinutes(val);
+                               setTimeLeft((val || 0) * 60);
+                             }} 
+                           />
+                           <span style={{ fontSize: '1.5rem', color: 'var(--accent-orange)', fontWeight: 'bold' }}>MINUTES</span>
+                         </div>
+                      </>
                    ) : (
                       <div className="pomodoro-display">{formatTime(timeLeft)}</div>
                    )}
 
-                   {/* UPDATED BUTTON TEXT */}
+                   {/* START & BREATHE BUTTONS */}
                    {!timerActive ? (
-                     <button onClick={() => setTimerActive(true)} className="btn-gothic" style={{ background: 'var(--accent-red)' }}>PREPARE FOR BATTLE</button>
+                     <button 
+                       onClick={() => {
+                         // ENFORCES THE 20 MINUTE MINIMUM HERE
+                         if (!customMinutes || customMinutes < 20) {
+                           setCustomMinutes(20);
+                           setTimeLeft(20 * 60);
+                           alert("The Heavens demand at least 20 minutes of focus to temper your Dao!");
+                           return; // Stops the timer from starting until they acknowledge
+                         }
+                         setTimerActive(true);
+                       }} 
+                       className="btn-gothic" 
+                       style={{ background: 'var(--accent-red)' }}
+                     >
+                       PREPARE FOR BATTLE
+                     </button>
                    ) : (
                      <button onClick={() => setTimerActive(false)} className="btn-gothic">BREATHE</button>
                    )}
@@ -312,7 +361,7 @@ const Dashboard = () => {
         <h2 style={{ borderBottom: '1px solid var(--line-light)' }}>Sect Stats</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px' }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px' }}>
-              <img src="/assets/flame.png" style={{ width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 }} alt="flame" />
+              <img src="/assets/flame.png" className={`sect-flame ${streakPulse ? 'is-pulsing' : ''}`} alt="flame" />
               <div style={{ textAlign: 'left' }}>
                   <h3 style={{ margin: 0, color: 'var(--accent-orange)' }}>{streak} Days</h3>
                   <span style={{ fontSize: '0.9rem', color: '#fff' }}>Current Streak</span>
@@ -332,7 +381,6 @@ const Dashboard = () => {
             <img src={`/assets/${mood}`} style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,69,0,0.5))' }} alt="current mood" />
         </div>
         
-        {/* MODIFIED TO CALL handleMoodSelect */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
            <button onClick={() => handleMoodSelect('mood-happy.png')} className="btn-gothic">Happy</button>
            <button onClick={() => handleMoodSelect('mood-neutral.png')} className="btn-gothic">Neutral</button>
@@ -340,7 +388,6 @@ const Dashboard = () => {
            <button onClick={() => handleMoodSelect('mood-angry.png')} className="btn-gothic">Angry</button>
         </div>
 
-        {/* NEW MOOD ADVICE TEXT */}
         <div className="mood-advice">
            {moodAdvice}
         </div>
