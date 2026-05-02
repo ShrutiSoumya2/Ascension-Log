@@ -287,3 +287,123 @@ body {
 .sect-flame.is-pulsing {
   animation: flamePulseAnim 2s ease-in-out forwards;
 }
+
+/* =========================================
+   📱 MOBILE RESPONSIVENESS & MEDIA QUERIES 
+   ========================================= */
+
+@media (max-width: 1024px) {
+  /* 1. Stack the grid vertically instead of horizontally */
+  .layout-grid {
+    grid-template-columns: 1fr; 
+    gap: 30px;
+    padding: 15px;
+  }
+
+  /* 2. Shrink the arena slightly so it doesn't eat the whole phone screen */
+  .character-stage {
+    height: 350px; 
+  }
+
+  /* 3. Ensure the character scales down gracefully */
+  .character-rig {
+    width: 250px;
+    height: 250px;
+    margin-left: -125px; /* Half of 250px to keep it centered */
+  }
+
+  /* 4. Make buttons and inputs slightly larger for easy thumb tapping */
+  .btn-gothic, input, select {
+    padding: 12px !important;
+    font-size: 1rem !important;
+  }
+
+  /* 5. Adjust the Tribulation Modal to fit the phone screen */
+  .tribulation-box {
+    width: 90%;
+    padding: 20px;
+  }
+}
+
+/* For very small phones (like older iPhones) */
+@media (max-width: 400px) {
+  .character-rig {
+    width: 200px;
+    height: 200px;
+    margin-left: -100px;
+  }
+  .character-stage {
+    height: 300px;
+  }
+}
+/* =========================================
+   📱 MOBILE RESPONSIVENESS & HAMBURGER MENU 
+   ========================================= */
+
+/* Default Desktop Navbar Styles */
+.desktop-menu {
+  display: flex;
+  gap: 15px;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--accent-orange);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Default Profile Column Styles */
+.profile-stats-col {
+  border-right: 1px solid var(--line-light);
+  padding-right: 20px;
+}
+
+/* --- THE MOBILE BREAKPOINT (Tablets & Phones) --- */
+@media (max-width: 850px) {
+  
+  /* 1. Hide the horizontal menu, show the Hamburger */
+  .desktop-menu {
+    display: none !important; 
+  }
+  
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  /* 2. Style the Dropdown Menu Overlay */
+  .mobile-menu-dropdown {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 75px; /* Sits right below the navbar */
+    left: 10px;
+    right: 10px;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+  }
+
+  .mobile-menu-dropdown a, 
+  .mobile-menu-dropdown button {
+    width: 100%;
+    text-align: center;
+    padding: 15px !important;
+  }
+
+  /* 3. Fix the Profile Columns when they stack */
+  .profile-stats-col {
+    border-right: none !important;
+    border-bottom: 1px solid var(--line-light);
+    padding-right: 0 !important;
+    padding-bottom: 20px;
+    width: 100%;
+  }
+
+  /* 4. Ensure the Realms page boxes don't overflow */
+  .realm-popup {
+    width: 90%;
+  }
+}

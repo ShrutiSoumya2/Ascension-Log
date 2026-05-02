@@ -23,6 +23,9 @@ export const GameProvider = ({ children }) => {
   // --- NEW BOSS WARNING STATE ---
   const [hasSeenBossWarning, setHasSeenBossWarning] = useState(localStorage.getItem('hasSeenBossWarning') === 'true');
 
+  // --- NEW INSIGHTS STATE ---
+  const [insights, setInsights] = useState(() => JSON.parse(localStorage.getItem('insights')) || []);
+
   // 1. Save everything to Local Storage
   useEffect(() => {
     if (character) {
@@ -34,14 +37,15 @@ export const GameProvider = ({ children }) => {
       localStorage.setItem('lastTaskDate', lastTaskDate);
       localStorage.setItem('firstTask', firstTaskDone);
       localStorage.setItem('enemiesDefeated', enemiesDefeated);
-      localStorage.setItem('hasSeenBossWarning', hasSeenBossWarning); // Saved!
+      localStorage.setItem('hasSeenBossWarning', hasSeenBossWarning);
+      localStorage.setItem('insights', JSON.stringify(insights)); // Saved!
     }
     
     // REBALANCED XP THRESHOLDS
     if (xp >= 500 && level === "Qi Condensation") setPendingTribulation("Foundation Establishment");
     if (xp >= 1500 && level === "Foundation Establishment") setPendingTribulation("Core Formation");
     if (xp >= 3500 && level === "Core Formation") setPendingTribulation("Nascent Soul");
-  }, [character, level, xp, tasks, streak, lastTaskDate, firstTaskDone, enemiesDefeated, hasSeenBossWarning]);
+  }, [character, level, xp, tasks, streak, lastTaskDate, firstTaskDone, enemiesDefeated, hasSeenBossWarning, insights]);
 
   // 2. Check on load if the user missed a day and broke their streak
   useEffect(() => {
@@ -118,7 +122,8 @@ export const GameProvider = ({ children }) => {
     setEnemiesDefeated(0);
     setActiveBattle(null);
     setPendingTribulation(null);
-    setHasSeenBossWarning(false); // Resets warning for a new cultivator
+    setHasSeenBossWarning(false);
+    setInsights([]); // Resets insights for a new cultivator
   };
 
   return (
@@ -128,7 +133,8 @@ export const GameProvider = ({ children }) => {
       pendingTribulation, setPendingTribulation,
       activeBattle, setActiveBattle, streak, firstTaskDone, enemiesDefeated,
       notification, triggerNotification, resetProgressForNewUser,
-      hasSeenBossWarning, setHasSeenBossWarning // Exported to Dashboard!
+      hasSeenBossWarning, setHasSeenBossWarning,
+      insights, setInsights // Exported to Dashboard!
     }}>
       {children}
     </GameContext.Provider>
