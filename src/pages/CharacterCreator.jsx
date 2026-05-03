@@ -10,9 +10,7 @@ const CharacterCreator = () => {
     { id: 'character-female', name: 'Lady Ember' },
     { id: 'character-male', name: 'Void Walker' }
   ];
-
-  // --- BLANK SLATE DEFAULTS ---
-  // Always default to New Cultivator (false) and an empty name string
+// Always default to New Cultivator (false) and an empty name string
   const [isLoginMode, setIsLoginMode] = useState(false); 
   const [name, setName] = useState('');
   const [password, setPassword] = useState(''); 
@@ -101,7 +99,7 @@ const CharacterCreator = () => {
             flex: 1
           }}
         >
-          New Cultivator
+        New Cultivator 
         </button>
         <button 
           onClick={() => handleModeSwitch(true)}
