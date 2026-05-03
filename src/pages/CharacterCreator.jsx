@@ -11,10 +11,10 @@ const CharacterCreator = () => {
     { id: 'character-male', name: 'Void Walker' }
   ];
 
-  // --- NEW: Mode Toggle State ---
-  const [isLoginMode, setIsLoginMode] = useState(false); // false = New User, true = Returning User
-
-  const [name, setName] = useState(character ? character.name : '');
+  // --- BLANK SLATE DEFAULTS ---
+  // Always default to New Cultivator (false) and an empty name string
+  const [isLoginMode, setIsLoginMode] = useState(false); 
+  const [name, setName] = useState('');
   const [password, setPassword] = useState(''); 
   const [errorMsg, setErrorMsg] = useState(''); 
   
@@ -26,13 +26,20 @@ const CharacterCreator = () => {
   const sectRoster = JSON.parse(localStorage.getItem('sectRoster')) || {};
   const isReturningUser = !!sectRoster[name];
 
-  // UX MAGIC: Only lock the dropdown if they are explicitly in "Returning User" mode AND the name exists.
   useEffect(() => {
     if (isLoginMode && isReturningUser) {
       setSelectedClass(sectRoster[name].classId);
       setErrorMsg(''); 
     }
-  }, [name, isLoginMode, isReturningUser]); // Need to watch sectRoster stringification if dynamic, but this is fine for local
+  }, [name, isLoginMode, isReturningUser]);
+
+  // --- STRICT TAB SWITCHING ---
+  const handleModeSwitch = (mode) => {
+    setIsLoginMode(mode);
+    setErrorMsg('');
+    setPassword(''); 
+    setName(''); // Explicitly wipe the name field whenever they change tabs
+  };
 
   const handleStart = () => {
     setErrorMsg('');
@@ -86,7 +93,7 @@ const CharacterCreator = () => {
       {/* --- THE MODE TOGGLE TABS --- */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
         <button 
-          onClick={() => { setIsLoginMode(false); setErrorMsg(''); }}
+          onClick={() => handleModeSwitch(false)}
           className="btn-gothic"
           style={{ 
             background: !isLoginMode ? 'var(--accent-red)' : 'rgba(0,0,0,0.5)',
@@ -97,7 +104,7 @@ const CharacterCreator = () => {
           New Cultivator
         </button>
         <button 
-          onClick={() => { setIsLoginMode(true); setErrorMsg(''); }}
+          onClick={() => handleModeSwitch(true)}
           className="btn-gothic"
           style={{ 
             background: isLoginMode ? 'var(--accent-red)' : 'rgba(0,0,0,0.5)',

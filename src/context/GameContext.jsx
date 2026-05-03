@@ -12,7 +12,7 @@ export const GameProvider = ({ children }) => {
   const [pendingTribulation, setPendingTribulation] = useState(null); 
   const [activeBattle, setActiveBattle] = useState(null); 
   
-  // --- NEW STREAK LOGIC STATES ---
+  // --- STREAK LOGIC STATES ---
   const [streak, setStreak] = useState(parseInt(localStorage.getItem('streak')) || 1);
   const [lastTaskDate, setLastTaskDate] = useState(localStorage.getItem('lastTaskDate') || null);
 
@@ -20,11 +20,24 @@ export const GameProvider = ({ children }) => {
   const [enemiesDefeated, setEnemiesDefeated] = useState(parseInt(localStorage.getItem('enemiesDefeated')) || 0);
   const [notification, setNotification] = useState(null); 
 
-  // --- NEW BOSS WARNING STATE ---
   const [hasSeenBossWarning, setHasSeenBossWarning] = useState(localStorage.getItem('hasSeenBossWarning') === 'true');
-
-  // --- NEW INSIGHTS STATE ---
   const [insights, setInsights] = useState(() => JSON.parse(localStorage.getItem('insights')) || []);
+
+  // --- GLOBAL TIMER STATES ---
+  const [customMinutes, setCustomMinutes] = useState(25);
+  const [timeLeft, setTimeLeft] = useState(1500); 
+  const [timerActive, setTimerActive] = useState(false);
+
+  // GLOBAL TIMER COUNTDOWN LOGIC
+  useEffect(() => {
+    let interval;
+    if (timerActive && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    } else if (timeLeft === 0) {
+      setTimerActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [timerActive, timeLeft]);
 
   // 1. Save everything to Local Storage
   useEffect(() => {
@@ -38,7 +51,7 @@ export const GameProvider = ({ children }) => {
       localStorage.setItem('firstTask', firstTaskDone);
       localStorage.setItem('enemiesDefeated', enemiesDefeated);
       localStorage.setItem('hasSeenBossWarning', hasSeenBossWarning);
-      localStorage.setItem('insights', JSON.stringify(insights)); // Saved!
+      localStorage.setItem('insights', JSON.stringify(insights));
     }
     
     // REBALANCED XP THRESHOLDS
@@ -58,7 +71,6 @@ export const GameProvider = ({ children }) => {
         const diffTime = Math.abs(today - lastTask);
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
         
-        // If more than 1 day has passed since last task, reset streak to 1
         if (diffDays > 1) {
             setStreak(1);
         }
@@ -68,8 +80,10 @@ export const GameProvider = ({ children }) => {
   const addTask = (task) => setTasks([...tasks, task]);
   
   const completeTask = (taskId, difficulty) => {
-    // Hard (Boss) gives a massive 100 XP due to the 25 min timer
-    const gainedXp = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 30 : 100;
+    // --- UPDATED XP PROGRESSION ---
+    // Scaled to require consistent cultivation to reach Foundation Establishment (500 XP)
+    const gainedXp = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30;
+    
     setXp(prev => prev + gainedXp);
     setTasks(prev => prev.filter(t => t.id !== taskId));
     setEnemiesDefeated(prev => prev + 1);
@@ -81,15 +95,13 @@ export const GameProvider = ({ children }) => {
          const yesterday = new Date();
          yesterday.setDate(yesterday.getDate() - 1);
          
-         // If their last task was exactly yesterday, +1!
          if (lastTaskDate === yesterday.toDateString()) {
              setStreak(prev => prev + 1); 
          } else {
-             // Otherwise, they missed a day, reset to 1
              setStreak(1); 
          }
       }
-      setLastTaskDate(todayStr); // Log today as the most recent activity
+      setLastTaskDate(todayStr);
     }
 
     if (!firstTaskDone) {
@@ -103,8 +115,15 @@ export const GameProvider = ({ children }) => {
   };
 
   const abandonTask = (taskId) => {
+    // Remove the task from the list
     setTasks(prev => prev.filter(t => t.id !== taskId));
-    setActiveBattle(null);
+    
+    // BUG FIX: If you flee the boss you are currently fighting, reset the arena AND the timer!
+    if (activeBattle && activeBattle.id === taskId) {
+      setActiveBattle(null);
+      setTimerActive(false); // Stop the clock
+      setTimeLeft(customMinutes * 60); // Reset the time back to full
+    }
   };
 
   const triggerNotification = (img, text) => {
@@ -123,7 +142,12 @@ export const GameProvider = ({ children }) => {
     setActiveBattle(null);
     setPendingTribulation(null);
     setHasSeenBossWarning(false);
-    setInsights([]); // Resets insights for a new cultivator
+    setInsights([]); 
+    
+    // Reset timer for new user
+    setTimerActive(false);
+    setTimeLeft(1500);
+    setCustomMinutes(25);
   };
 
   return (
@@ -134,7 +158,9 @@ export const GameProvider = ({ children }) => {
       activeBattle, setActiveBattle, streak, firstTaskDone, enemiesDefeated,
       notification, triggerNotification, resetProgressForNewUser,
       hasSeenBossWarning, setHasSeenBossWarning,
-      insights, setInsights // Exported to Dashboard!
+      insights, setInsights,
+      // Exporting Timer States
+      customMinutes, setCustomMinutes, timeLeft, setTimeLeft, timerActive, setTimerActive
     }}>
       {children}
     </GameContext.Provider>

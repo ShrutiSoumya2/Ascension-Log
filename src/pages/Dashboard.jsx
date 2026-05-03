@@ -10,7 +10,8 @@ const Dashboard = () => {
     mood, setMood, pendingTribulation, setPendingTribulation, 
     activeBattle, setActiveBattle, streak, enemiesDefeated, notification,
     hasSeenBossWarning, setHasSeenBossWarning,
-    insights, setInsights
+    insights, setInsights,
+    customMinutes, setCustomMinutes, timeLeft, setTimeLeft, timerActive, setTimerActive
   } = useContext(GameContext);
   
   const [newTaskName, setNewTaskName] = useState('');
@@ -19,19 +20,10 @@ const Dashboard = () => {
   const [isDefeated, setIsDefeated] = useState(false); 
   const [showYellowGlow, setShowYellowGlow] = useState(false); 
 
-  // Focus Timer States
-  const [customMinutes, setCustomMinutes] = useState(25);
-  const [timeLeft, setTimeLeft] = useState(1500); 
-  const [timerActive, setTimerActive] = useState(false);
-
-  // Mood Advice State
   const [moodAdvice, setMoodAdvice] = useState("Your Qi is settled. Begin your cultivation.");
-
-  // --- New Streak Pulse State ---
   const [streakPulse, setStreakPulse] = useState(false);
 
   useEffect(() => {
-    // Whenever the streak mounts or increases, trigger the halo pulse!
     if (streak > 0) {
       setStreakPulse(true);
       const timer = setTimeout(() => setStreakPulse(false), 2000); 
@@ -39,7 +31,6 @@ const Dashboard = () => {
     }
   }, [streak]);
 
-  // Ascension States
   const [reflection, setReflection] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [showAscensionFlash, setShowAscensionFlash] = useState(false);
@@ -47,11 +38,10 @@ const Dashboard = () => {
 
   if (!character) return <Navigate to="/" />;
 
-  // Scales up the medium and hard beasts, and keeps them grounded
   const beastConfig = {
-    easy: { active: 'beast-easy.png', defeated: 'beasteasy-defeated.png', width: '220px', bottom: '15%', right: '5%' },
-    medium: { active: 'beast-medium.png', defeated: 'beastmedium-defeated.png', width: '380px', bottom: '5%', right: '3%' },
-    hard: { active: 'beast-hard.png', defeated: 'beasthard-defeated.png', width: '480px', bottom: '0%', right: '2%' } 
+    easy: { active: 'beast-easy.png', defeated: 'beasteasy-defeated.png', width: '200px', bottom: '15%', right: '5%' },
+    medium: { active: 'beast-medium.png', defeated: 'beastmedium-defeated.png', width: '300px', bottom: '7%', right: '-1%' },
+    hard: { active: 'beast-hard.png', defeated: 'beasthard-defeated.png', width: '400px', bottom: '5%', right: '-4%' } 
   };
 
   let currentBg = '/assets/bg-sitting.jpg';
@@ -68,16 +58,6 @@ const Dashboard = () => {
     imageSuffix = 'sky';
   } 
 
-  useEffect(() => {
-    let interval;
-    if (timerActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0) {
-      setTimerActive(false);
-    }
-    return () => clearInterval(interval);
-  }, [timerActive, timeLeft]);
-
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
@@ -88,25 +68,16 @@ const Dashboard = () => {
     e.preventDefault();
     if (newTaskName) {
       addTask({ id: Date.now(), name: newTaskName, difficulty });
-      
-      // If they accepted a Boss Battle, mark the warning as seen!
       if (difficulty === 'hard') {
         setHasSeenBossWarning(true);
       }
-      
       setNewTaskName('');
     }
   };
 
   const startBattle = (task) => {
-    // If we are ALREADY in a battle and switching to a DIFFERENT one
     if (activeBattle && activeBattle.id !== task.id) {
-      
-      // 1. Clear the active battle. This immediately triggers the Sky background 
-      // and makes your cultivator float up.
       setActiveBattle(null); 
-      
-      // 2. Wait exactly 800ms (matching your CSS transition), then dive back down
       setTimeout(() => {
         setActiveBattle(task);
         if (task.difficulty === 'hard') {
@@ -114,11 +85,9 @@ const Dashboard = () => {
           setTimerActive(false);
         }
       }, 800); 
-      
     } else {
-      // Normal engagement from the sky/cave (no delay needed)
       setActiveBattle(task);
-      if (task.difficulty === 'hard') {
+      if (task.difficulty === 'hard' && !timerActive && timeLeft === customMinutes * 60) {
         setTimeLeft(customMinutes * 60); 
         setTimerActive(false);
       }
@@ -127,19 +96,16 @@ const Dashboard = () => {
 
   const handleStrike = () => {
     setIsStriking(true);
-
     setTimeout(() => {
       setIsStriking(false); 
       setIsDefeated(true);  
       setShowYellowGlow(true); 
-      
       setTimeout(() => {
         completeTask(activeBattle.id, activeBattle.difficulty);
         setIsDefeated(false);
         setShowYellowGlow(false);
         setTimeLeft(customMinutes * 60); 
       }, 4000); 
-
     }, 400); 
   };
 
@@ -156,10 +122,11 @@ const Dashboard = () => {
       return alert("Your Dao is shallow. Provide at least 10 words of true reflection.");
     }
     setIsEvaluating(true);
+    
     setTimeout(() => {
       setIsEvaluating(false);
 
-      // Save the insight before clearing it!
+      // Save the insight
       const newInsight = {
         id: Date.now(),
         realm: pendingTribulation,
@@ -168,16 +135,23 @@ const Dashboard = () => {
       };
       setInsights(prev => [newInsight, ...prev]);
 
-      setPendingTribulation(null); 
+      // Trigger the flash, which hides the tribulation box naturally
       setShowAscensionFlash(true); 
+      
       setTimeout(() => {
+        // BUG FIX: Update the level AND clear the tribulation simultaneously!
+        // This prevents GameContext from accidentally triggering it again during the delay.
         setLevel(pendingTribulation); 
+        setPendingTribulation(null); 
+        
         setShowRealmPopup(true); 
+        
         setTimeout(() => {
           setShowAscensionFlash(false);
           setShowRealmPopup(false);
           setReflection('');
         }, 4000);
+        
       }, 1500); 
     }, 2000);
   };
@@ -230,7 +204,17 @@ const Dashboard = () => {
 
         {/* --- LEFT: Task Manager --- */}
         <div className="glass-panel">
-          <h2 style={{ borderBottom: '1px solid var(--line-light)' }}>Demon Bounties</h2>
+          
+          <h2 style={{ 
+            borderBottom: '1px solid var(--line-light)',
+            color: !activeBattle ? 'var(--accent-orange)' : 'var(--text-main)',
+            textShadow: !activeBattle ? '0 0 10px rgba(255, 69, 0, 0.4)' : 'none',
+            transition: 'all 0.3s ease',
+            paddingBottom: '5px'
+          }}>
+            Demon Bounties {!activeBattle && <span style={{fontSize: '0.8rem', fontStyle: 'italic', color: 'var(--line-light)', float: 'right', marginTop: '5px'}}>Awaiting Target...</span>}
+          </h2>
+
           <form onSubmit={handleAdd} style={{ marginBottom: '20px' }}>
             <input 
               value={newTaskName} onChange={e => setNewTaskName(e.target.value)} 
@@ -242,7 +226,6 @@ const Dashboard = () => {
               <option value="hard">Abyssal Demon King [Boss Battle]</option>
             </select>
 
-            {/* DYNAMIC WARNING: Appears only if they select Hard AND haven't acknowledged it yet */}
             {difficulty === 'hard' && !hasSeenBossWarning && (
               <div style={{ fontSize: '0.85rem', color: 'var(--accent-orange)', marginBottom: '15px', fontStyle: 'italic', borderLeft: '2px solid var(--accent-orange)', paddingLeft: '8px' }}>
                 * Defeating a Demon King requires real-world focus. You must complete a minimum 20-minute Pomodoro task to gather enough Qi to strike!
@@ -257,6 +240,7 @@ const Dashboard = () => {
               <TaskCard 
                 key={task.id} 
                 task={task} 
+                isActive={activeBattle && activeBattle.id === task.id} 
                 onBattle={() => startBattle(task)} 
                 onFlee={abandonTask} 
               />
@@ -304,12 +288,11 @@ const Dashboard = () => {
           <div style={{ marginTop: '20px', minHeight: '80px' }}>
             {activeBattle && activeBattle.difficulty === 'hard' && !isDefeated ? (
               <div>
-                {timeLeft > 0 ? (
+                {/* BUG FIX: Checks if the timer actually ran, or if it's just empty/0 in setup mode! */}
+                {timeLeft > 0 || timeLeft === (customMinutes || 0) * 60 ? (
                   <>
-                    {/* DYNAMIC TIMER INPUT - Shows only when paused and full */}
-                    {!timerActive && timeLeft === customMinutes * 60 ? (
+                    {!timerActive && timeLeft === (customMinutes || 0) * 60 ? (
                         <>
-                          {/* LORE INSTRUCTIONS: Reminds player of the real-world mechanic! */}
                           <p style={{ color: 'var(--line-light)', fontSize: '0.9rem', fontStyle: 'italic', marginBottom: '15px', padding: '0 20px' }}>
                             Set your meditation timer. Focus purely on your real-world task to gather Qi. Do not break your concentration until the timer ends!
                           </p>
@@ -321,7 +304,6 @@ const Dashboard = () => {
                               min="20" 
                               value={customMinutes} 
                               onChange={(e) => {
-                                // Allows smooth typing without snapping the number prematurely
                                 const val = e.target.value === '' ? '' : parseInt(e.target.value);
                                 setCustomMinutes(val);
                                 setTimeLeft((val || 0) * 60);
@@ -334,16 +316,14 @@ const Dashboard = () => {
                         <div className="pomodoro-display">{formatTime(timeLeft)}</div>
                     )}
 
-                    {/* START & BREATHE BUTTONS */}
                     {!timerActive ? (
                       <button 
                         onClick={() => {
-                          // ENFORCES THE 20 MINUTE MINIMUM HERE
                           if (!customMinutes || customMinutes < 20) {
                             setCustomMinutes(20);
                             setTimeLeft(20 * 60);
                             alert("The Heavens demand at least 20 minutes of focus to temper your Dao!");
-                            return; // Stops the timer from starting until they acknowledge
+                            return; 
                           }
                           setTimerActive(true);
                         }} 

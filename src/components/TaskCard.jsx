@@ -1,19 +1,17 @@
 import React from 'react';
 
-const TaskCard = ({ task, onBattle, onFlee }) => {
+const TaskCard = ({ task, onBattle, onFlee, isActive }) => {
   
-  // Xianxia Lore Dictionary for Threat Levels
   const threatLevels = {
     easy: "Minor Demon",
     medium: "Elite Fiend",
     hard: "Boss Battle"
   };
 
-  // Color coding based on danger
   const threatColors = {
-    easy: "var(--line-light)",      // Silver/White for easy
-    medium: "var(--accent-orange)", // Orange for medium
-    hard: "var(--accent-red)"       // Dark Red for hard
+    easy: "var(--line-light)",
+    medium: "var(--accent-orange)",
+    hard: "var(--accent-red)"
   };
 
   return (
@@ -21,17 +19,19 @@ const TaskCard = ({ task, onBattle, onFlee }) => {
       borderLeft: `4px solid ${threatColors[task.difficulty]}`, 
       padding: '10px', 
       marginBottom: '10px', 
-      background: 'rgba(0,0,0,0.5)',
+      // NEW: Dynamic background and scale based on isActive!
+      background: isActive ? `radial-gradient(circle at left, rgba(139,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%)` : 'rgba(0,0,0,0.5)',
+      transform: isActive ? 'scale(1.02)' : 'scale(1)',
+      border: isActive ? `1px solid ${threatColors[task.difficulty]}` : 'none',
+      transition: 'all 0.3s ease',
       borderRadius: '0 4px 4px 0'
     }}>
       
-      {/* Dynamic Title Bar */}
       <div style={{ margin: '0 0 10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '1.1rem', wordBreak: 'break-word', paddingRight: '10px' }}>
+        <span style={{ fontSize: '1.1rem', wordBreak: 'break-word', paddingRight: '10px', color: isActive ? 'white' : 'var(--text-main)' }}>
           {task.name}
         </span>
         
-        {/* The Immersive Threat Badge */}
         <span style={{ 
           fontSize: '0.8rem', 
           color: threatColors[task.difficulty],
@@ -46,16 +46,21 @@ const TaskCard = ({ task, onBattle, onFlee }) => {
         </span>
       </div>
 
-      {/* Action Buttons */}
       <div style={{ display: 'flex' }}>
-        <button onClick={() => onBattle(task)} className="btn-gothic">Engage</button>
-        
-        {/* Note: I swapped var(--accent-grey) to var(--line-light) to match your main CSS variables! */}
+        {/* NEW: Dynamic Button Styling */}
         <button 
-          onClick={() => onFlee(task.id)} 
-          className="btn-gothic" 
-          style={{ borderColor: 'var(--line-light)', color: 'var(--line-light)', marginLeft: '10px' }}
+          onClick={() => onBattle(task)} 
+          className="btn-gothic"
+          style={{
+            background: isActive ? 'var(--accent-red)' : 'rgba(0,0,0,0.6)',
+            color: isActive ? 'white' : 'var(--accent-orange)',
+            borderColor: isActive ? 'var(--accent-red)' : 'var(--line-light)'
+          }}
         >
+          {isActive ? "ENGAGED" : "ENGAGE"}
+        </button>
+        
+        <button onClick={() => onFlee(task.id)} className="btn-gothic" style={{ borderColor: 'var(--line-light)', color: 'var(--line-light)', marginLeft: '10px' }}>
           Flee
         </button>
       </div>

@@ -103,13 +103,22 @@ body {
 /* Stance: Sky (Flying) */
 .stance-sky { bottom: 40px; }
 
+/* =========================================
+   ⚔️ COMBAT SPACING & LUNGE ANIMATION 
+   ========================================= */
+
 /* Stance: Forest (Idle Attack Ready) */
-.stance-forest { bottom: 0px; margin-left: -80px; } 
+.stance-forest { 
+  bottom: 0px; 
+  transform: translateX(-140px); /* Back away from the beast */
+  transition: transform 0.4s ease-out; /* Smooth walk into position */
+  z-index: 20;
+} 
 
 /* --- The Lunge Attack Animation --- */
-/* Simply slides the entire flat image forward towards the beast */
-.character-rig.is-striking {
-  transform: translateX(80px); /* Lunges to the right */
+.character-rig.stance-forest.is-striking {
+  transform: translateX(80px) scale(1.1); /* Dash right and get slightly bigger */
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0.8, 1); /* Blindingly fast snap forward */
 }
 
 /* Boss Defeat Glow */
@@ -262,6 +271,7 @@ body {
   border-top: 1px dashed rgba(255, 255, 255, 0.2);
   padding-top: 10px;
 }
+
 /* --- Sect Flame & Halo --- */
 .sect-flame {
   width: 40px;  /* Keeps the dark background box tight and sleek */
@@ -323,6 +333,15 @@ body {
     width: 90%;
     padding: 20px;
   }
+
+  /* 6. Adjust Combat Spacing for smaller screens */
+  .character-rig.stance-forest {
+    transform: translateX(-60px); 
+  }
+  
+  .character-rig.stance-forest.is-striking {
+    transform: translateX(40px) scale(1.1); 
+  }
 }
 
 /* For very small phones (like older iPhones) */
@@ -336,6 +355,7 @@ body {
     height: 300px;
   }
 }
+
 /* =========================================
    📱 MOBILE RESPONSIVENESS & HAMBURGER MENU 
    ========================================= */
