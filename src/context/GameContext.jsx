@@ -23,10 +23,13 @@ export const GameProvider = ({ children }) => {
   const [hasSeenBossWarning, setHasSeenBossWarning] = useState(localStorage.getItem('hasSeenBossWarning') === 'true');
   const [insights, setInsights] = useState(() => JSON.parse(localStorage.getItem('insights')) || []);
 
-  // --- GLOBAL TIMER STATES ---
+  // --- GLOBAL TIMER & TIME TRACKING STATES ---
   const [customMinutes, setCustomMinutes] = useState(25);
   const [timeLeft, setTimeLeft] = useState(1500); 
   const [timerActive, setTimerActive] = useState(false);
+  
+  // Tracks the total amount of minutes spent focusing
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(parseInt(localStorage.getItem('totalFocusMinutes')) || 0);
 
   // GLOBAL TIMER COUNTDOWN LOGIC
   useEffect(() => {
@@ -52,13 +55,14 @@ export const GameProvider = ({ children }) => {
       localStorage.setItem('enemiesDefeated', enemiesDefeated);
       localStorage.setItem('hasSeenBossWarning', hasSeenBossWarning);
       localStorage.setItem('insights', JSON.stringify(insights));
+      localStorage.setItem('totalFocusMinutes', totalFocusMinutes);
     }
     
     // REBALANCED XP THRESHOLDS
     if (xp >= 500 && level === "Qi Condensation") setPendingTribulation("Foundation Establishment");
     if (xp >= 1500 && level === "Foundation Establishment") setPendingTribulation("Core Formation");
     if (xp >= 3500 && level === "Core Formation") setPendingTribulation("Nascent Soul");
-  }, [character, level, xp, tasks, streak, lastTaskDate, firstTaskDone, enemiesDefeated, hasSeenBossWarning, insights]);
+  }, [character, level, xp, tasks, streak, lastTaskDate, firstTaskDone, enemiesDefeated, hasSeenBossWarning, insights, totalFocusMinutes]);
 
   // 2. Check on load if the user missed a day and broke their streak
   useEffect(() => {
@@ -80,10 +84,30 @@ export const GameProvider = ({ children }) => {
   const addTask = (task) => setTasks([...tasks, task]);
   
   const completeTask = (taskId, difficulty) => {
-    // --- UPDATED XP PROGRESSION ---
-    // Scaled to require consistent cultivation to reach Foundation Establishment (500 XP)
-    const gainedXp = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30;
+    let gainedXp = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30;
     
+    // --- UPDATED: 5-HOUR MILESTONE LOGIC ---
+    if (difficulty === 'hard') {
+      // Divide by 300 minutes (5 hours) to find out how many 5-hour blocks they've completed
+      const oldMilestones = Math.floor(totalFocusMinutes / 300);
+      const newTotalMinutes = totalFocusMinutes + customMinutes;
+      const newMilestones = Math.floor(newTotalMinutes / 300);
+
+      // If they crossed a 5-hour threshold (e.g., went from 290 mins to 315 mins)
+      if (newMilestones > oldMilestones) {
+        // Give 20 XP for every 5-hour milestone reached
+        const bonusXp = (newMilestones - oldMilestones) * 20; 
+        gainedXp += bonusXp;
+        
+        // Trigger a special notification for the milestone
+        setTimeout(() => {
+           triggerNotification('flame', `Dao Mastery: +${bonusXp} Bonus XP!`);
+        }, 1000); 
+      }
+      
+      setTotalFocusMinutes(newTotalMinutes);
+    }
+
     setXp(prev => prev + gainedXp);
     setTasks(prev => prev.filter(t => t.id !== taskId));
     setEnemiesDefeated(prev => prev + 1);
@@ -115,14 +139,12 @@ export const GameProvider = ({ children }) => {
   };
 
   const abandonTask = (taskId) => {
-    // Remove the task from the list
     setTasks(prev => prev.filter(t => t.id !== taskId));
     
-    // BUG FIX: If you flee the boss you are currently fighting, reset the arena AND the timer!
     if (activeBattle && activeBattle.id === taskId) {
       setActiveBattle(null);
-      setTimerActive(false); // Stop the clock
-      setTimeLeft(customMinutes * 60); // Reset the time back to full
+      setTimerActive(false); 
+      setTimeLeft(customMinutes * 60); 
     }
   };
 
@@ -143,8 +165,7 @@ export const GameProvider = ({ children }) => {
     setPendingTribulation(null);
     setHasSeenBossWarning(false);
     setInsights([]); 
-    
-    // Reset timer for new user
+    setTotalFocusMinutes(0);
     setTimerActive(false);
     setTimeLeft(1500);
     setCustomMinutes(25);
@@ -159,8 +180,8 @@ export const GameProvider = ({ children }) => {
       notification, triggerNotification, resetProgressForNewUser,
       hasSeenBossWarning, setHasSeenBossWarning,
       insights, setInsights,
-      // Exporting Timer States
-      customMinutes, setCustomMinutes, timeLeft, setTimeLeft, timerActive, setTimerActive
+      customMinutes, setCustomMinutes, timeLeft, setTimeLeft, timerActive, setTimerActive,
+      totalFocusMinutes, setTotalFocusMinutes 
     }}>
       {children}
     </GameContext.Provider>

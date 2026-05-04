@@ -4,9 +4,19 @@ import { Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
 const CharacterProfile = () => {
-  const { character, level, xp, streak, enemiesDefeated, insights } = useContext(GameContext);
+  // NEW: Bringing in totalFocusMinutes from Context
+  const { character, level, xp, streak, enemiesDefeated, insights, totalFocusMinutes } = useContext(GameContext);
 
   if (!character) return <Navigate to="/" />;
+
+  // NEW: Math to convert total raw minutes into clean Hours and Minutes
+  const hours = Math.floor(totalFocusMinutes / 60);
+  const minutes = totalFocusMinutes % 60;
+  
+  // Format the text elegantly depending on whether they've reached a full hour yet
+  const formattedTime = hours > 0 
+    ? `${hours}h ${minutes}m` 
+    : `${minutes}m`;
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 15px' }}>
@@ -14,7 +24,7 @@ const CharacterProfile = () => {
       
       <div className="glass-panel" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         
-        {/* Left Stats Column - Notice the new className here! */}
+        {/* Left Stats Column */}
         <div className="profile-stats-col" style={{ flex: '1', minWidth: '250px', textAlign: 'center' }}>
           <img 
             src={`/assets/${character.classId}-cave.png`} 
@@ -27,7 +37,13 @@ const CharacterProfile = () => {
           <div style={{ background: 'rgba(0,0,0,0.6)', padding: '15px', borderRadius: '8px', border: '1px solid var(--accent-red)' }}>
             <p style={{ margin: '5px 0' }}><strong>Current XP:</strong> {xp}</p>
             <p style={{ margin: '5px 0' }}><strong>Demons Slain:</strong> {enemiesDefeated}</p>
-            <p style={{ margin: '5px 0' }}><strong>Unbroken Resolve:</strong> {streak} Days</p>
+            <p style={{ margin: '5px 0' }}><strong>Unbroken Resolve:</strong> {streak} {streak === 1 ? 'Day' : 'Days'}</p>
+            
+            {/* NEW: Displays their total productive time! */}
+            <p style={{ margin: '10px 0 5px 0', borderTop: '1px dashed var(--line-light)', paddingTop: '10px', color: 'var(--accent-orange)' }}>
+              <strong>Focused Cultivation:</strong>
+              <br/>{formattedTime}
+            </p>
           </div>
         </div>
 

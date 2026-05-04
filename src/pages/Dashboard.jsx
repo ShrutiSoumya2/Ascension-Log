@@ -357,7 +357,7 @@ const Dashboard = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px' }}>
                 <img src="/assets/flame.png" className={`sect-flame ${streakPulse ? 'is-pulsing' : ''}`} alt="flame" />
                 <div style={{ textAlign: 'left' }}>
-                    <h3 style={{ margin: 0, color: 'var(--accent-orange)' }}>{streak} Days</h3>
+                    <h3 style={{ margin: 0, color: 'var(--accent-orange)' }}>{streak} {streak === 1 ? 'Day' : 'Days'}</h3>
                     <span style={{ fontSize: '0.9rem', color: '#fff' }}>Current Streak</span>
                 </div>
             </div>
@@ -371,8 +371,17 @@ const Dashboard = () => {
           </div>
 
           <h2 style={{ borderBottom: '1px solid var(--line-light)', marginTop: '30px' }}>Current Mood</h2>
-          <div style={{ textAlign: 'center', margin: '20px 0', minHeight: '80px' }}>
-              <img src={`/assets/${mood}`} style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,69,0,0.5))' }} alt="current mood" />
+          <div style={{ textAlign: 'center', margin: '20px 0', minHeight: '120px' }}>
+              <img 
+                src={`/assets/${mood}`} 
+                style={{ 
+                  width: '120px', 
+                  height: '120px', 
+                  objectFit: 'contain', 
+                  filter: 'drop-shadow(0 0 10px rgba(255,69,0,0.5))' 
+                }} 
+                alt="current mood" 
+              />
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
